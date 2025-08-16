@@ -1,4 +1,3 @@
-// app/layout.js
 export const metadata = {
   title: "Inside My Head — Portfolio",
   description:
