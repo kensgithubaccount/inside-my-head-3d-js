@@ -1,13 +1,12 @@
 "use client";
 import { useRef, useState } from "react";
 import Brain3D from "../components/Brain3D";
-import "./globals.css";
 
-export default function Page(){
+export default function Page() {
   const heroRef = useRef(null);
   const [hemi, setHemi] = useState(null);
 
-  const setHemiAttr = (side)=>{
+  const setHemiAttr = (side) => {
     setHemi(side);
     const el = heroRef.current;
     if (!el) return;
@@ -38,63 +37,122 @@ export default function Page(){
               <Brain3D activeSide={hemi} />
             </div>
 
-            <svg className="hotspots" viewBox="0 0 1280 800" role="group" aria-label="Interactive brain hotspots">
-              <a xlinkHref="/work/amtrak" href="/work/amtrak" aria-label="Open Amtrak case study" className="spot spot-left top"
-                 onMouseEnter={()=>setHemiAttr('left')} onFocus={()=>setHemiAttr('left')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+            {/* Hotspot hit areas (a11y+pointer) */}
+            <svg
+              className="hotspots"
+              viewBox="0 0 1280 800"
+              role="group"
+              aria-label="Interactive brain hotspots"
+            >
+              <a
+                xlinkHref="/work/amtrak"
+                href="/work/amtrak"
+                className="spot spot-left top"
+                aria-label="Open Amtrak case study"
+                onMouseEnter={() => setHemiAttr("left")}
+                onFocus={() => setHemiAttr("left")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <title>Amtrak — Break the Travel Quo</title>
                 <ellipse cx="410" cy="360" rx="250" ry="170" />
               </a>
-              <a xlinkHref="/work/parietal-lobe" href="/work/parietal-lobe" aria-label="Open Parietal lobe case study" className="spot spot-left bottom"
-                 onMouseEnter={()=>setHemiAttr('left')} onFocus={()=>setHemiAttr('left')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+              <a
+                xlinkHref="/work/parietal-lobe"
+                href="/work/parietal-lobe"
+                className="spot spot-left bottom"
+                aria-label="Open Parietal lobe case study"
+                onMouseEnter={() => setHemiAttr("left")}
+                onFocus={() => setHemiAttr("left")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <title>Parietal lobe — You Can’t Make This Stuff Up</title>
                 <ellipse cx="500" cy="600" rx="280" ry="170" />
               </a>
-              <a xlinkHref="/work/nestle-waters" href="/work/nestle-waters" aria-label="Open Nestlé Waters case study" className="spot spot-right top"
-                 onMouseEnter={()=>setHemiAttr('right')} onFocus={()=>setHemiAttr('right')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+              <a
+                xlinkHref="/work/nestle-waters"
+                href="/work/nestle-waters"
+                className="spot spot-right top"
+                aria-label="Open Nestlé Waters case study"
+                onMouseEnter={() => setHemiAttr("right")}
+                onFocus={() => setHemiAttr("right")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <title>Nestlé Waters — Greatness Springs from Here</title>
                 <ellipse cx="860" cy="360" rx="250" ry="170" />
               </a>
-              <a xlinkHref="/work/cod-mw3" href="/work/cod-mw3" aria-label="Open Call of Duty MW3 case study" className="spot spot-right bottom"
-                 onMouseEnter={()=>setHemiAttr('right')} onFocus={()=>setHemiAttr('right')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+              <a
+                xlinkHref="/work/cod-mw3"
+                href="/work/cod-mw3"
+                className="spot spot-right bottom"
+                aria-label="Open Call of Duty MW3 case study"
+                onMouseEnter={() => setHemiAttr("right")}
+                onFocus={() => setHemiAttr("right")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <title>Call of Duty MW3 — There’s a Soldier in All of Us</title>
                 <ellipse cx="950" cy="600" rx="280" ry="170" />
               </a>
             </svg>
 
+            {/* Around-brain labels */}
             <div className="labels">
-              <a className="label left top" href="/work/amtrak"
-                 onMouseEnter={()=>setHemiAttr('left')} onFocus={()=>setHemiAttr('left')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+              <a
+                className="label left top"
+                href="/work/amtrak"
+                onMouseEnter={() => setHemiAttr("left")}
+                onFocus={() => setHemiAttr("left")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <span className="label-title">Amtrak</span>
                 <span className="label-sub">Break the Travel Quo</span>
               </a>
-              <a className="label left bottom" href="/work/parietal-lobe"
-                 onMouseEnter={()=>setHemiAttr('left')} onFocus={()=>setHemiAttr('left')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+              <a
+                className="label left bottom"
+                href="/work/parietal-lobe"
+                onMouseEnter={() => setHemiAttr("left")}
+                onFocus={() => setHemiAttr("left")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <span className="label-title">Parietal lobe</span>
                 <span className="label-sub">You Can’t Make This Stuff Up</span>
               </a>
-              <a className="label right top" href="/work/nestle-waters"
-                 onMouseEnter={()=>setHemiAttr('right')} onFocus={()=>setHemiAttr('right')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+              <a
+                className="label right top"
+                href="/work/nestle-waters"
+                onMouseEnter={() => setHemiAttr("right")}
+                onFocus={() => setHemiAttr("right")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <span className="label-title">Nestlé Waters</span>
                 <span className="label-sub">Greatness Springs from Here</span>
               </a>
-              <a className="label right bottom" href="/work/cod-mw3"
-                 onMouseEnter={()=>setHemiAttr('right')} onFocus={()=>setHemiAttr('right')}
-                 onMouseLeave={()=>setHemiAttr(null)} onBlur={()=>setHemiAttr(null)}>
+              <a
+                className="label right bottom"
+                href="/work/cod-mw3"
+                onMouseEnter={() => setHemiAttr("right")}
+                onFocus={() => setHemiAttr("right")}
+                onMouseLeave={() => setHemiAttr(null)}
+                onBlur={() => setHemiAttr(null)}
+              >
                 <span className="label-title">Call of Duty MW3</span>
                 <span className="label-sub">There’s a Soldier in All of Us</span>
               </a>
             </div>
           </div>
 
-          <a className="cta" href="#start">Start here</a>
-          <p className="foot-hint">If you’ve scrolled this far, we should talk.</p>
+          <a className="cta" href="#start" role="button">
+            Start here
+          </a>
+          <p className="foot-hint">
+            If you’ve scrolled this far, we should talk.
+          </p>
         </section>
       </main>
     </>
