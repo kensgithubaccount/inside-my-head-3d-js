@@ -122,3 +122,10 @@ body{
   .h1,.subhead,.label,.cta{animation:none!important;opacity:1!important;transform:none!important}
   .cta{transition:none!important}
 }
+
+/* make sure the canvas fills the slot perfectly and never adds gaps */
+.brain-3d canvas{display:block; width:100% !important; height:100% !important; border-radius:12px}
+
+/* prevent any parent overflow from clipping soft glows at extreme sizes */
+.brain-wrap{overflow:visible}
+
