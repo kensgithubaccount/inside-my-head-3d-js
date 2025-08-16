@@ -2,109 +2,180 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
-export default function Brain3D({ activeSide }){
+export default function Brain3D({ activeSide }) {
   const containerRef = useRef(null);
-  const hemiLeft = useRef();
-  const hemiRight = useRef();
-  const groupRef = useRef();
+  const leftRef = useRef();
+  const rightRef = useRef();
 
-  useEffect(()=>{
+  useEffect(() => {
     const el = containerRef.current;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, el.clientWidth/el.clientHeight, 0.1, 100);
-    camera.position.set(0, 0.45, 3.1);
 
-    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+    // --- Renderer ---
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(el.clientWidth, el.clientHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     el.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-    const leftKey = new THREE.DirectionalLight(new THREE.Color("#d05e3f"), 1.05);
-    leftKey.position.set(-3,2,2);
-    const rightKey = new THREE.DirectionalLight(new THREE.Color("#25445c"), 1.0);
-    rightKey.position.set(3,2,2);
-    const rim = new THREE.DirectionalLight(0xffffff, 0.4);
-    rim.position.set(0,-1,-2);
-    scene.add(leftKey, rightKey, rim);
+    // --- Scene & Camera ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      40,
+      el.clientWidth / el.clientHeight,
+      0.1,
+      100
+    );
+    // Camera angle & distance tuned to the reference
+    camera.position.set(0, 0.18, 3.08);
 
-    const group = new THREE.Group();
-    groupRef.current = group;
-    scene.add(group);
+    // --- Geometry ---
+    // High segment UV sphere for smooth silhouette
+    const geom = new THREE.SphereGeometry(1, 160, 120);
 
-    const createHemi = (side, color, offsetX) => {
-      const geom = makeGyriSphere(1, 7, side);
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(color),
-        roughness: 0.9, metalness: 0.05, envMapIntensity: 0.4,
-        emissive: new THREE.Color(color), emissiveIntensity: 0.05
+    // --- Shader (soft diffuse + rim, vertex fbm displacement) ---
+    const vs = `
+      precision highp float;
+      varying vec3 vN;
+      varying vec3 vW;
+      uniform mat4 modelMatrix;
+      uniform mat4 modelViewMatrix;
+      uniform mat4 projectionMatrix;
+      attribute vec3 position;
+      attribute vec3 normal;
+
+      // cheap noise
+      float snoise(vec3 p){
+        return sin(p.x*1.3 + cos(p.y*1.7) + p.z*1.1) * cos(p.x*0.7 - p.y*1.1 + p.z*0.5);
+      }
+      float fbm(vec3 p){
+        float t = 0.0, a = 1.0, f = 1.0;
+        for(int i=0;i<4;i++){
+          t += a * snoise(p*f);
+          a *= 0.5; f *= 1.9;
+        }
+        return t*0.5 + 0.5;
+      }
+
+      void main(){
+        vec3 N = normalize(normal);
+        // tuned displacement depth to match ref micro-bump
+        float d = fbm(position*vec3(2.2,2.0,2.4))*0.12
+                + fbm(position.zyx*vec3(3.1,2.8,2.6))*0.06;
+        vec3 displaced = position + N * d;
+
+        vec4 world = modelMatrix * vec4(displaced, 1.0);
+        vW = world.xyz;
+        vN = normalize(mat3(modelMatrix) * N);
+
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
+      }
+    `;
+
+    const fs = `
+      precision highp float;
+      varying vec3 vN;
+      varying vec3 vW;
+
+      uniform vec3 uBase;
+      uniform float uEmissive;
+
+      // 3 key lights roughly matching the reference
+      const vec3 L1 = normalize(vec3(-3.0,  2.0,  2.0)); // warm left key
+      const vec3 L2 = normalize(vec3( 3.0,  2.0,  2.0)); // cool right key
+      const vec3 L3 = normalize(vec3( 0.0, -1.0, -2.0)); // underside fill
+
+      void main(){
+        vec3 N = normalize(vN);
+        float d1 = max(dot(N, L1), 0.0);
+        float d2 = max(dot(N, L2), 0.0);
+        float d3 = max(dot(N, L3), 0.0) * 0.45;
+
+        // soft matte look
+        float diff = d1*1.05 + d2*1.0 + d3;
+        vec3 col = uBase * (0.35 + diff*0.85);
+
+        // gentle rim for a soft edge highlight
+        float rim = pow(1.0 - max(dot(N, normalize(-vW)), 0.0), 3.0);
+        col += vec3(0.12) * rim;
+
+        // on-hover emissive lift
+        col += uBase * uEmissive;
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    const makeMat = (baseHex) =>
+      new THREE.ShaderMaterial({
+        vertexShader: vs,
+        fragmentShader: fs,
+        uniforms: {
+          uBase: { value: new THREE.Color(baseHex).convertSRGBToLinear() },
+          uEmissive: { value: 0.05 },
+        },
+        glslVersion: THREE.GLSL3, // Three uses #version 300 es when possible
       });
-      const mesh = new THREE.Mesh(geom, mat);
-      mesh.position.set(offsetX, 0, 0);
-      mesh.rotation.x = 0.08;
-      group.add(mesh);
-      return mesh;
-    };
 
-    hemiLeft.current = createHemi("left", "#d05e3f", -0.55);
-    hemiRight.current = createHemi("right", "#25445c", 0.55);
-    group.scale.set(1.6,1.4,1.6);
+    // --- Left (red) & Right (blue) hemispheres ---
+    const left = new THREE.Mesh(geom, makeMat("#d05e3f"));
+    const right = new THREE.Mesh(geom, makeMat("#25445c"));
 
+    // Transform to match reference pose/scale
+    const group = new THREE.Group();
+    left.position.x = -0.55;
+    right.position.x = 0.55;
+    group.scale.set(1.55, 1.35, 1.55);
+    group.rotation.x = 0.08;
+    scene.add(group);
+    group.add(left, right);
+
+    leftRef.current = left;
+    rightRef.current = right;
+
+    // --- Animate (slow yaw + tiny bob) ---
     let raf = 0;
-    const animate = (t)=>{
+    const animate = (t) => {
       raf = requestAnimationFrame(animate);
-      group.rotation.y += 0.0016 * Math.min(2, renderer.getPixelRatio());
-      group.position.y = Math.sin(t*0.0006)*0.02;
+      group.rotation.y += 0.0015;
+      group.position.y = Math.sin(t * 0.0006) * 0.02;
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(animate);
 
-    const onResize = ()=>{
-      const w = el.clientWidth, h = el.clientHeight;
-      renderer.setSize(w,h);
-      camera.aspect = w/h;
+    // --- Resize handling ---
+    const onResize = () => {
+      const w = el.clientWidth,
+        h = el.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
     };
     const ro = new ResizeObserver(onResize);
     ro.observe(el);
 
-    return ()=>{ cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.innerHTML=""; };
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      renderer.dispose();
+      el.innerHTML = "";
+    };
   }, []);
 
-  useEffect(()=>{
-    if (!hemiLeft.current || !hemiRight.current) return;
-    hemiLeft.current.material.emissiveIntensity = activeSide==="left"?0.25:0.05;
-    hemiRight.current.material.emissiveIntensity = activeSide==="right"?0.25:0.05;
+  // On hover/focus, boost emissive per side
+  useEffect(() => {
+    if (!leftRef.current || !rightRef.current) return;
+    leftRef.current.material.uniforms.uEmissive.value =
+      activeSide === "left" ? 0.25 : 0.05;
+    rightRef.current.material.uniforms.uEmissive.value =
+      activeSide === "right" ? 0.25 : 0.05;
   }, [activeSide]);
 
-  return <div ref={containerRef} style={{position:"relative", width:"100%", height:"100%"}} aria-label="3D brain" role="img" />;
-}
-
-// geometry helpers
-function makeGyriSphere(radius=1, detail=6, side="left"){
-  const geom = new THREE.IcosahedronGeometry(radius, detail);
-  const pos = geom.attributes.position;
-  const v = new THREE.Vector3();
-  for(let i=0;i<pos.count;i++){
-    v.fromBufferAttribute(pos, i);
-    const bias = side==="left" ? 1.0 : 0.95;
-    const n = fbm(v.x*2.2, v.y*2.0, v.z*2.4);
-    const n2 = fbm(v.z*3.1, v.x*2.8, v.y*2.6);
-    const disp = (n*0.12 + n2*0.06) * bias;
-    v.normalize().multiplyScalar(radius + disp);
-    pos.setXYZ(i, v.x, v.y*1.02, v.z);
-  }
-  geom.computeVertexNormals();
-  return geom;
-}
-function fbm(x,y,z){
-  let t=0, amp=1, freq=1;
-  for(let i=0;i<4;i++){
-    t += amp * snoise(x*freq, y*freq, z*freq);
-    amp *= 0.5; freq *= 1.9;
-  }
-  return t*0.5 + 0.5;
-}
-function snoise(x,y,z){
-  return Math.sin(x*1.3+Math.cos(y*1.7)+z*1.1) * Math.cos(x*0.7 - y*1.1 + z*0.5);
+  return (
+    <div
+      ref={containerRef}
+      style={{ position: "relative", width: "100%", height: "100%" }}
+      aria-label="3D render of a human brain, red left hemisphere and blue right hemisphere."
+      role="img"
+    />
+  );
 }
